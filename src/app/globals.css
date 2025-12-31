@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Gmarket Sans font */
+@font-face {
+  font-family: "GmarketSans";
+  src: url("/fonts/GmarketSansTTFLight.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "GmarketSans";
+  src: url("/fonts/GmarketSansTTFMedium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "GmarketSans";
+  src: url("/fonts/GmarketSansTTFBold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --safe-area-inset-top: env(safe-area-inset-top);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom);
+    --safe-area-inset-left: env(safe-area-inset-left);
+    --safe-area-inset-right: env(safe-area-inset-right);
+  }
+
+  html {
+    font-family: "GmarketSans", -apple-system, BlinkMacSystemFont, system-ui, Roboto,
+      "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR",
+      "Malgun Gothic", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-neutral-100 text-neutral-800 antialiased;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+
+  /* Remove default focus outline and add custom */
+  *:focus {
+    outline: none;
+  }
+
+  *:focus-visible {
+    @apply ring-2 ring-primary-pink ring-offset-2;
+  }
+}
+
+@layer components {
+  /* Typography */
+  .text-display-1 {
+    @apply text-[2.5rem] leading-tight font-bold;
+  }
+
+  .text-display-2 {
+    @apply text-[2rem] leading-snug font-bold;
+  }
+
+  .text-heading-1 {
+    @apply text-2xl leading-normal font-semibold;
+  }
+
+  .text-heading-2 {
+    @apply text-xl leading-normal font-semibold;
+  }
+
+  /* Gradient text */
+  .text-gradient-pink {
+    @apply bg-gradient-to-r from-primary-pink to-pink-400 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-purple {
+    @apply bg-gradient-to-r from-primary-purple to-purple-400 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-blue {
+    @apply bg-gradient-to-r from-primary-blue to-blue-400 bg-clip-text text-transparent;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-white/80 backdrop-blur-md;
+  }
+
+  /* Safe area padding */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .pl-safe {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .pr-safe {
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Touch action */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  /* Animation */
+  .animate-in {
+    animation: animate-in 0.3s ease-out;
+  }
+
+  @keyframes animate-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
