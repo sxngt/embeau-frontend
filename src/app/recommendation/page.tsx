@@ -1,76 +1,97 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import FeedbackRating from "@/components/ui/FeedbackRating";
 import BottomNavigation from "@/components/layout/BottomNavigation";
-import type { FeedbackRating as FeedbackRatingType } from "@/types";
-
-// Mock data for recommendations
-const mockRecommendations = {
-  color: {
-    name: "부드러운 민트블루",
-    hex: "#5ECFCF",
-  },
-  items: [
-    {
-      id: "1",
-      imageUrl: "/images/recommendation/fashion-1.jpg",
-      title: "민트 가디건",
-    },
-    {
-      id: "2",
-      imageUrl: "/images/recommendation/fashion-2.jpg",
-      title: "하트 귀걸이",
-    },
-    {
-      id: "3",
-      imageUrl: "/images/recommendation/fashion-3.jpg",
-      title: "민트 아이섀도우",
-    },
-  ],
-  foods: [
-    {
-      id: "4",
-      imageUrl: "/images/recommendation/food-1.jpg",
-      title: "민트 마카롱",
-    },
-    {
-      id: "5",
-      imageUrl: "/images/recommendation/food-2.jpg",
-      title: "민트초코 아이스",
-    },
-    {
-      id: "6",
-      imageUrl: "/images/recommendation/food-3.jpg",
-      title: "민트 컵케이크",
-    },
-  ],
-};
+import { recommendationService, feedbackService } from "@/services/api";
+import type { FeedbackRating as FeedbackRatingType, Recommendation } from "@/types";
 
 export default function RecommendationPage() {
   const router = useRouter();
+  const [recommendations, setRecommendations] = useState<Recommendation | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [itemFeedback, setItemFeedback] = useState<FeedbackRatingType | undefined>();
   const [foodFeedback, setFoodFeedback] = useState<FeedbackRatingType | undefined>();
 
-  const handleItemFeedback = (rating: FeedbackRatingType) => {
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      try {
+        setIsLoading(true);
+        const response = await recommendationService.getRecommendations();
+        if (response.success && response.data) {
+          setRecommendations(response.data);
+        } else {
+          setError(response.error?.message || "추천을 불러오는데 실패했습니다.");
+        }
+      } catch (err) {
+        setError("추천을 불러오는데 실패했습니다.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRecommendations();
+  }, []);
+
+  const handleItemFeedback = async (rating: FeedbackRatingType) => {
     setItemFeedback(rating);
-    // TODO: Send feedback to API
-    console.log("Item feedback:", rating);
+    try {
+      await feedbackService.submitFeedback({
+        rating,
+        targetType: "recommendation",
+        targetId: "items",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Item feedback failed:", error);
+    }
   };
 
-  const handleFoodFeedback = (rating: FeedbackRatingType) => {
+  const handleFoodFeedback = async (rating: FeedbackRatingType) => {
     setFoodFeedback(rating);
-    // TODO: Send feedback to API
-    console.log("Food feedback:", rating);
+    try {
+      await feedbackService.submitFeedback({
+        rating,
+        targetType: "recommendation",
+        targetId: "foods",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Food feedback failed:", error);
+    }
   };
 
   const handleViewWeekly = () => {
     router.push("/insight");
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary-blue border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-neutral-600">추천을 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !recommendations) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-5">
+        <Card variant="outlined" padding="lg" className="text-center max-w-md">
+          <p className="text-neutral-600 mb-4">{error || "추천을 불러오는데 실패했습니다."}</p>
+          <Button variant="secondary" onClick={() => window.location.reload()}>
+            다시 시도
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pb-36">
@@ -91,10 +112,10 @@ export default function RecommendationPage() {
           <div className="flex flex-col items-center">
             <div
               className="w-20 h-20 rounded-full mb-3 shadow-lg"
-              style={{ backgroundColor: mockRecommendations.color.hex }}
+              style={{ backgroundColor: recommendations.color.hex }}
             />
             <h2 className="text-lg font-bold text-neutral-800">
-              {mockRecommendations.color.name}
+              {recommendations.color.name}
             </h2>
           </div>
         </Card>
@@ -106,13 +127,13 @@ export default function RecommendationPage() {
           </div>
 
           <div className="grid grid-cols-3 gap-3 mb-4">
-            {mockRecommendations.items.map((item) => (
+            {recommendations.items.map((item) => (
               <div
                 key={item.id}
-                className="aspect-square rounded-xl bg-neutral-100 overflow-hidden relative"
+                className="aspect-square rounded-xl overflow-hidden relative"
+                style={{ backgroundColor: item.color || recommendations.color.hex }}
               >
-                {/* Placeholder for images */}
-                <div className="w-full h-full flex items-center justify-center text-neutral-400 text-xs">
+                <div className="w-full h-full flex items-center justify-center text-white text-xs text-center p-2 font-medium">
                   {item.title}
                 </div>
               </div>
@@ -133,13 +154,13 @@ export default function RecommendationPage() {
           </div>
 
           <div className="grid grid-cols-3 gap-3 mb-4">
-            {mockRecommendations.foods.map((food) => (
+            {recommendations.foods.map((food) => (
               <div
                 key={food.id}
-                className="aspect-square rounded-xl bg-neutral-100 overflow-hidden relative"
+                className="aspect-square rounded-xl overflow-hidden relative"
+                style={{ backgroundColor: food.color || recommendations.color.hex }}
               >
-                {/* Placeholder for images */}
-                <div className="w-full h-full flex items-center justify-center text-neutral-400 text-xs text-center p-2">
+                <div className="w-full h-full flex items-center justify-center text-white text-xs text-center p-2 font-medium">
                   {food.title}
                 </div>
               </div>

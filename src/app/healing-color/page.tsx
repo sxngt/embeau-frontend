@@ -1,33 +1,73 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import FeedbackRating from "@/components/ui/FeedbackRating";
+import { useColorStore } from "@/store/useColorStore";
+import { feedbackService } from "@/services/api";
 import type { FeedbackRating as FeedbackRatingType } from "@/types";
 
 export default function HealingColorPage() {
   const router = useRouter();
+  const { dailyHealingColor, fetchDailyHealingColor, isLoadingHealingColor, error } = useColorStore();
   const [feedbackRating, setFeedbackRating] = useState<FeedbackRatingType | undefined>();
 
-  // Mock data - TODO: Get from API/store
-  const healingColor = {
-    name: "부드러운 민트블루",
-    hex: "#5ECFCF",
-    calmEffect: "마음을 차분하게 가라앉히고 긴장을 덜어줍니다.",
-    personalFit: "당신의 퍼스널컬러 톤에도 잘 어울려, 자연스럽운 편안한 인상을 줍니다.",
-    dailyAffirmation: '"나는 오늘 차분하고 자신감 있게 하루를 보낼 수 있어"',
-  };
+  useEffect(() => {
+    if (!dailyHealingColor) {
+      fetchDailyHealingColor().catch(console.error);
+    }
+  }, [dailyHealingColor, fetchDailyHealingColor]);
 
-  const handleFeedback = (rating: FeedbackRatingType) => {
+  const handleFeedback = async (rating: FeedbackRatingType) => {
     setFeedbackRating(rating);
-    // TODO: Send feedback to API
-    console.log("Feedback submitted:", rating);
+    try {
+      await feedbackService.submitFeedback({
+        rating,
+        targetType: "healing_color",
+        targetId: dailyHealingColor?.date || new Date().toISOString(),
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Feedback submission failed:", error);
+    }
   };
 
   const handleStartDay = () => {
     router.push("/recommendation");
+  };
+
+  if (isLoadingHealingColor) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary-blue border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-neutral-600">오늘의 힐링 컬러를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !dailyHealingColor) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-5">
+        <Card variant="outlined" padding="lg" className="text-center max-w-md">
+          <p className="text-neutral-600 mb-4">{error || "힐링 컬러를 불러오는데 실패했습니다."}</p>
+          <Button variant="secondary" onClick={() => fetchDailyHealingColor()}>
+            다시 시도
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  const healingColor = {
+    name: dailyHealingColor.color.name,
+    hex: dailyHealingColor.color.hex,
+    calmEffect: dailyHealingColor.calmEffect,
+    personalFit: dailyHealingColor.personalFit,
+    dailyAffirmation: dailyHealingColor.dailyAffirmation,
   };
 
   return (

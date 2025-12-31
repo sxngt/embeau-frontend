@@ -1,37 +1,24 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { PersonalColorResult, DailyHealingColor, ColorItem } from "@/types";
+import type { PersonalColorResult, DailyHealingColor } from "@/types";
+import { colorService } from "@/services/api";
 
 interface ColorState {
   personalColorResult: PersonalColorResult | null;
   dailyHealingColor: DailyHealingColor | null;
   colorHistory: DailyHealingColor[];
   isAnalyzing: boolean;
+  isLoadingHealingColor: boolean;
   error: string | null;
 
   // Actions
   setPersonalColorResult: (result: PersonalColorResult) => void;
   setDailyHealingColor: (color: DailyHealingColor) => void;
   analyzeColor: (imageData: string) => Promise<PersonalColorResult>;
+  fetchDailyHealingColor: () => Promise<DailyHealingColor>;
   clearColorResult: () => void;
   clearError: () => void;
 }
-
-// Mock personal color results for development
-const mockColorResults: Record<string, PersonalColorResult> = {
-  summer_cool: {
-    season: "summer",
-    tone: "cool",
-    description: "자연스러운 광채를 돋보이게 하는 부드럽고 시원한 톤",
-    recommendedColors: [
-      { name: "겨자", hex: "#E6B422", description: "따뜻한 노란색" },
-      { name: "주황색", hex: "#FF8C00", description: "생동감 있는 오렌지" },
-      { name: "민트색", hex: "#98FF98", description: "상쾌한 민트" },
-      { name: "라벤더", hex: "#E6E6FA", description: "부드러운 보라" },
-    ],
-    analyzedAt: new Date().toISOString(),
-  },
-};
 
 export const useColorStore = create<ColorState>()(
   persist(
@@ -40,6 +27,7 @@ export const useColorStore = create<ColorState>()(
       dailyHealingColor: null,
       colorHistory: [],
       isAnalyzing: false,
+      isLoadingHealingColor: false,
       error: null,
 
       setPersonalColorResult: (result: PersonalColorResult) => {
@@ -50,19 +38,20 @@ export const useColorStore = create<ColorState>()(
         const currentHistory = get().colorHistory;
         set({
           dailyHealingColor: color,
-          colorHistory: [color, ...currentHistory].slice(0, 30), // Keep last 30 days
+          colorHistory: [color, ...currentHistory].slice(0, 30),
         });
       },
 
       analyzeColor: async (imageData: string) => {
         set({ isAnalyzing: true, error: null });
         try {
-          // TODO: Replace with actual API call
-          // const response = await colorService.analyzePersonalColor(imageData);
+          const response = await colorService.analyzePersonalColor(imageData);
 
-          // Mock analysis for development
-          await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate API delay
-          const result = mockColorResults.summer_cool;
+          if (!response.success || !response.data) {
+            throw new Error(response.error?.message || "색상 분석에 실패했습니다.");
+          }
+
+          const result = response.data;
 
           set({
             personalColorResult: result,
@@ -75,6 +64,35 @@ export const useColorStore = create<ColorState>()(
           set({
             error: errorMessage,
             isAnalyzing: false,
+          });
+          throw error;
+        }
+      },
+
+      fetchDailyHealingColor: async () => {
+        set({ isLoadingHealingColor: true, error: null });
+        try {
+          const response = await colorService.getDailyHealingColor();
+
+          if (!response.success || !response.data) {
+            throw new Error(response.error?.message || "힐링 컬러를 불러오는데 실패했습니다.");
+          }
+
+          const healingColor = response.data;
+          const currentHistory = get().colorHistory;
+
+          set({
+            dailyHealingColor: healingColor,
+            colorHistory: [healingColor, ...currentHistory].slice(0, 30),
+            isLoadingHealingColor: false,
+          });
+
+          return healingColor;
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : "힐링 컬러를 불러오는데 실패했습니다.";
+          set({
+            error: errorMessage,
+            isLoadingHealingColor: false,
           });
           throw error;
         }
