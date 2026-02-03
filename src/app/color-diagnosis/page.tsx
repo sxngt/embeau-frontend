@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, RefreshCw, X } from "lucide-react";
+import { Camera, RefreshCw, X, Upload } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -12,12 +12,14 @@ export default function ColorDiagnosisPage() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const { analyzeColor, isAnalyzing } = useColorStore();
 
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [useFileUpload, setUseFileUpload] = useState(false);
 
   // Start camera on mount
   useEffect(() => {
@@ -50,7 +52,13 @@ export default function ColorDiagnosisPage() {
       }
     } catch (error) {
       console.error("Camera access failed:", error);
-      setCameraError("카메라 권한을 허용해주세요");
+      const errorMessage = error instanceof Error ? error.message : "";
+      if (errorMessage.includes("NotFoundError") || errorMessage.includes("not found")) {
+        setCameraError("카메라를 찾을 수 없습니다");
+        setUseFileUpload(true);
+      } else {
+        setCameraError("카메라 권한을 허용해주세요");
+      }
     }
   };
 
@@ -91,7 +99,25 @@ export default function ColorDiagnosisPage() {
 
   const handleRetake = () => {
     setCapturedImage(null);
-    startCamera();
+    if (!useFileUpload) {
+      startCamera();
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const imageData = event.target?.result as string;
+      setCapturedImage(imageData);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const triggerFileUpload = () => {
+    fileInputRef.current?.click();
   };
 
   const handleAnalyze = async () => {
@@ -145,17 +171,32 @@ export default function ColorDiagnosisPage() {
         {/* Camera Section */}
         <Card variant="outlined" padding="lg">
           <div className="aspect-square bg-neutral-900 rounded-xl flex flex-col items-center justify-center overflow-hidden relative">
-            {cameraError ? (
+            {cameraError && !capturedImage ? (
               <div className="text-center p-4">
-                <Camera className="w-12 h-12 text-white/50 mx-auto mb-3" />
+                {useFileUpload ? (
+                  <Upload className="w-12 h-12 text-white/50 mx-auto mb-3" />
+                ) : (
+                  <Camera className="w-12 h-12 text-white/50 mx-auto mb-3" />
+                )}
                 <p className="text-white/70 text-sm mb-4">{cameraError}</p>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={startCamera}
-                >
-                  다시 시도
-                </Button>
+                {useFileUpload ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={triggerFileUpload}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    사진 선택
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={startCamera}
+                  >
+                    다시 시도
+                  </Button>
+                )}
               </div>
             ) : capturedImage ? (
               <>
@@ -194,6 +235,14 @@ export default function ColorDiagnosisPage() {
           </div>
           {/* Hidden canvas for capturing */}
           <canvas ref={canvasRef} className="hidden" />
+          {/* Hidden file input for upload */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
         </Card>
 
         {/* Action Buttons */}
@@ -206,7 +255,7 @@ export default function ColorDiagnosisPage() {
               onClick={handleRetake}
             >
               <RefreshCw className="w-5 h-5 mr-2" />
-              다시 찍기
+              {useFileUpload ? "다시 선택" : "다시 찍기"}
             </Button>
             <Button
               variant="secondary"
@@ -218,6 +267,16 @@ export default function ColorDiagnosisPage() {
               분석하기
             </Button>
           </div>
+        ) : useFileUpload ? (
+          <Button
+            variant="secondary"
+            size="lg"
+            fullWidth
+            onClick={triggerFileUpload}
+          >
+            <Upload className="w-5 h-5 mr-2" />
+            사진 선택
+          </Button>
         ) : (
           <Button
             variant="secondary"
