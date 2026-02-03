@@ -73,13 +73,22 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      console.error("Insert emotion entry error:", insertError);
+      console.error("Insert emotion entry error:", {
+        error: insertError,
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        data: emotionEntry,
+      });
       return errorResponse(
         "DATABASE_ERROR",
-        "감정 기록 저장 중 오류가 발생했습니다.",
+        `감정 기록 저장 중 오류가 발생했습니다: ${insertError.message}`,
         500
       );
     }
+
+    console.log("Emotion entry saved:", insertedEntry.id);
 
     return successResponse({
       id: insertedEntry.id,

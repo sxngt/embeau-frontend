@@ -100,12 +100,36 @@ export async function POST(request: NextRequest) {
     };
 
     if (existingResult) {
-      await supabase
+      const { error: updateError } = await supabase
         .from("color_results")
         .update(colorResultData)
         .eq("user_id", user.id);
+
+      if (updateError) {
+        console.error("Update color result error:", {
+          error: updateError,
+          code: updateError.code,
+          message: updateError.message,
+          data: colorResultData,
+        });
+      } else {
+        console.log("Color result updated for user:", user.id);
+      }
     } else {
-      await supabase.from("color_results").insert(colorResultData);
+      const { error: insertError } = await supabase
+        .from("color_results")
+        .insert(colorResultData);
+
+      if (insertError) {
+        console.error("Insert color result error:", {
+          error: insertError,
+          code: insertError.code,
+          message: insertError.message,
+          data: colorResultData,
+        });
+      } else {
+        console.log("Color result inserted for user:", user.id);
+      }
     }
 
     return successResponse({

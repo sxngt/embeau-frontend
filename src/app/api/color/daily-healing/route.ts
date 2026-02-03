@@ -77,12 +77,24 @@ export async function GET() {
       date: todayStr,
     };
 
-    const { error: insertError } = await supabase
+    const { data: insertedData, error: insertError } = await supabase
       .from("daily_healing_colors")
-      .insert(newDailyColor);
+      .insert(newDailyColor)
+      .select()
+      .single();
 
     if (insertError) {
-      console.error("Insert daily healing color error:", insertError);
+      console.error("Insert daily healing color error:", {
+        error: insertError,
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        data: newDailyColor,
+      });
+      // 에러가 있어도 응답은 반환 (저장 실패해도 컬러는 보여줌)
+    } else {
+      console.log("Daily healing color saved:", insertedData?.id);
     }
 
     return successResponse({

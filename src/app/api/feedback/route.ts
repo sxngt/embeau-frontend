@@ -54,13 +54,22 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      console.error("Insert feedback error:", insertError);
+      console.error("Insert feedback error:", {
+        error: insertError,
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        data: feedbackData,
+      });
       return errorResponse(
         "DATABASE_ERROR",
-        "피드백 저장 중 오류가 발생했습니다.",
+        `피드백 저장 중 오류가 발생했습니다: ${insertError.message}`,
         500
       );
     }
+
+    console.log("Feedback saved:", insertedFeedback.id);
 
     return successResponse({
       id: insertedFeedback.id,

@@ -181,7 +181,25 @@ export async function GET() {
       stress_relief: Math.max(Math.min(stressRelief, 100), -100),
     };
 
-    await supabase.from("weekly_insights").insert(insightData);
+    const { data: insertedInsight, error: insertError } = await supabase
+      .from("weekly_insights")
+      .insert(insightData)
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Insert weekly insight error:", {
+        error: insertError,
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        data: insightData,
+      });
+      // 에러가 있어도 응답은 반환
+    } else {
+      console.log("Weekly insight saved:", insertedInsight?.id);
+    }
 
     return successResponse({
       weekStart: weekStartStr,
