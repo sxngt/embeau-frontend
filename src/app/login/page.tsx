@@ -30,6 +30,8 @@ export default function LoginPage() {
 
     if (!participantId.trim()) {
       errors.participantId = "연구참여번호를 입력해주세요.";
+    } else if (participantId.trim().length < 6) {
+      errors.participantId = "연구참여번호는 6자 이상이어야 합니다.";
     }
 
     setFormErrors(errors);
@@ -58,8 +60,11 @@ export default function LoginPage() {
         <Logo size="md" className="mb-8 md:mb-12" />
 
         <h2 className="text-2xl md:text-3xl font-bold text-neutral-800 mb-2">오셨군요.</h2>
-        <p className="text-neutral-600 text-center mb-10 md:text-lg">
+        <p className="text-neutral-600 text-center mb-4 md:text-lg">
           오늘도 당신의 마음빛을 만나러 가볼까요?
+        </p>
+        <p className="text-sm text-neutral-500 text-center mb-10">
+          처음 방문하시면 자동으로 계정이 생성됩니다.
         </p>
 
         <form onSubmit={handleSubmit} className="w-full max-w-md space-y-4">
@@ -103,7 +108,7 @@ export default function LoginPage() {
               fullWidth
               isLoading={isLoading}
             >
-              로그인
+              시작하기
             </Button>
           </div>
         </form>
