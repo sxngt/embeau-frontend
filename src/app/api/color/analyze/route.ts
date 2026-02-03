@@ -117,6 +117,13 @@ export async function POST(request: NextRequest) {
       confidence,
       subtype: colorResultData.subtype,
       facialExpression: emotionData.facial_expression || null,
+      // 디버그 정보
+      _debug: {
+        source: analysisData.source || "unknown",
+        rawSeason: toneData.season,
+        rawSubtype: toneData.subtype,
+        analysisReason: toneData.analysis_reason,
+      },
     });
   } catch (error) {
     console.error("Color analysis error:", error);
@@ -134,17 +141,32 @@ async function analyzeWithVisionAPI(imageUrl: string): Promise<VisionAnalysisRes
     return fallbackAnalysis();
   }
 
-  const prompt = `이 얼굴 이미지를 분석하여 퍼스널 컬러와 표정을 판단해주세요.
+  const prompt = `당신은 전문 퍼스널 컬러 컨설턴트입니다. 이 얼굴 이미지를 분석하여 퍼스널 컬러를 진단해주세요.
 
-분석 항목:
-1. 피부 언더톤 (웜톤/쿨톤)
-2. 피부 밝기 (밝음/중간/어두움)
-3. 계절 타입 - 반드시 다음 중 하나: spring, summer, autumn, winter
-4. 세부 타입 - 반드시 다음 중 하나: warm, cool, clear, soft, deep, light
-5. 표정 (happy/neutral/calm/sad/surprised/angry)
+## 퍼스널 컬러 진단 기준
 
-중요: 이미지가 불분명하거나 얼굴이 잘 보이지 않아도, 가장 가능성이 높은 값을 선택해주세요.
-절대로 "unknown", "unclear", "cannot determine" 같은 값을 사용하지 마세요.
+### 1. 피부 언더톤 분석
+- **웜톤**: 피부가 노란빛, 복숭아빛, 황금빛을 띔. 혈관이 초록빛으로 보임.
+- **쿨톤**: 피부가 분홍빛, 푸른빛, 붉은빛을 띔. 혈관이 파란빛/보라빛으로 보임.
+
+### 2. 계절 타입 기준
+- **봄(spring)**: 웜톤 + 밝고 선명한 피부. 생기있는 느낌. 밝은 갈색/금발 어울림.
+- **여름(summer)**: 쿨톤 + 부드럽고 차분한 피부. 은은한 느낌. 회갈색/애쉬톤 어울림.
+- **가을(autumn)**: 웜톤 + 깊고 따뜻한 피부. 성숙한 느낌. 짙은 갈색/구릿빛 어울림.
+- **겨울(winter)**: 쿨톤 + 선명하고 차가운 피부. 대비가 강한 느낌. 검정/선명한 색 어울림.
+
+### 3. 세부 타입
+- **clear**: 선명하고 맑은 피부 (봄/겨울)
+- **soft**: 부드럽고 차분한 피부 (여름/가을)
+- **light**: 밝고 연한 피부 (봄/여름)
+- **deep**: 깊고 진한 피부 (가을/겨울)
+- **warm**: 따뜻한 톤 (봄/가을)
+- **cool**: 차가운 톤 (여름/겨울)
+
+## 분석 시 주의사항
+- 조명의 영향을 고려하여 자연스러운 피부톤을 추정하세요.
+- 눈동자 색, 머리카락 색, 입술 색도 함께 고려하세요.
+- 피부의 붉은기, 노란기, 푸른기를 세밀하게 관찰하세요.
 
 다음 JSON 형식으로만 응답해주세요:
 {
@@ -152,12 +174,12 @@ async function analyzeWithVisionAPI(imageUrl: string): Promise<VisionAnalysisRes
         "season": "spring 또는 summer 또는 autumn 또는 winter 중 하나만",
         "subtype": "warm 또는 cool 또는 clear 또는 soft 또는 deep 또는 light 중 하나만",
         "confidence": 0.0-1.0,
-        "undertone": "warm|cool|neutral",
-        "brightness": "light|medium|dark",
-        "analysis_reason": "분석 이유 설명"
+        "undertone": "warm 또는 cool 또는 neutral",
+        "brightness": "light 또는 medium 또는 dark",
+        "analysis_reason": "피부톤, 눈동자색, 머리카락색을 근거로 한 상세한 분석 이유"
     },
     "emotion": {
-        "facial_expression": "happy|neutral|calm|sad|surprised|angry",
+        "facial_expression": "happy 또는 neutral 또는 calm 또는 sad 또는 surprised 또는 angry",
         "facial_expression_confidence": 0.0-1.0
     }
 }`;
@@ -189,6 +211,7 @@ async function analyzeWithVisionAPI(imageUrl: string): Promise<VisionAnalysisRes
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
     result.source = "gpt-4o-vision";
+    console.log("GPT-4o Vision Analysis Result:", JSON.stringify(result, null, 2));
     return result;
   } catch (error) {
     console.warn("Vision API failed:", error);
