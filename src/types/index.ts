@@ -13,18 +13,6 @@ export interface PersonalColorSummary {
   tone: string;
 }
 
-// Token types
-export interface TokenResponse {
-  accessToken: string;
-  tokenType: string;
-  expiresIn: number;
-}
-
-export interface LoginResponse {
-  user: User;
-  token: TokenResponse;
-}
-
 // Personal Color types
 export type PersonalColorSeason = "spring" | "summer" | "autumn" | "winter";
 export type PersonalColorTone = "warm" | "cool";

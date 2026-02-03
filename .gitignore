@@ -51,3 +51,4 @@ public/workbox-*.js.map
 
 # Nested frontend folder (duplicate)
 frontend/
+.env*.local

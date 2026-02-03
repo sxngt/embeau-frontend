@@ -1,6 +1,5 @@
 import type {
   ApiResponse,
-  LoginResponse,
   PersonalColorResult,
   EmotionEntry,
   DailyHealingColor,
@@ -9,39 +8,14 @@ import type {
   FeedbackData,
 } from "@/types";
 
-// Base API configuration
-// Use proxy route to avoid HTTPS->HTTP mixed content issues on Vercel
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/proxy";
-
-// Token management
-let accessToken: string | null = null;
-
-export const setAccessToken = (token: string | null) => {
-  accessToken = token;
-  if (token) {
-    localStorage.setItem("embeau-token", token);
-  } else {
-    localStorage.removeItem("embeau-token");
-  }
-};
-
-export const getAccessToken = (): string | null => {
-  if (accessToken) return accessToken;
-  if (typeof window !== "undefined") {
-    accessToken = localStorage.getItem("embeau-token");
-  }
-  return accessToken;
-};
-
-export const clearAccessToken = () => {
-  accessToken = null;
-  localStorage.removeItem("embeau-token");
-};
+// Base API configuration - Now uses Next.js API routes directly
+const API_BASE_URL = "/api";
 
 // Generic fetch wrapper with error handling
+// Auth is handled by Supabase cookies automatically
 async function fetchApi<T>(
   endpoint: string,
-  options?: RequestInit & { skipAuth?: boolean }
+  options?: RequestInit
 ): Promise<ApiResponse<T>> {
   try {
     const headers: Record<string, string> = {
@@ -49,25 +23,15 @@ async function fetchApi<T>(
       ...(options?.headers as Record<string, string>),
     };
 
-    // Add Authorization header if token exists and not skipped
-    const token = getAccessToken();
-    if (token && !options?.skipAuth) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
+      credentials: "include", // Include cookies for Supabase auth
     });
 
     const responseData = await response.json();
 
     if (!response.ok) {
-      // Handle 401 Unauthorized - clear token
-      if (response.status === 401) {
-        clearAccessToken();
-      }
-
       return {
         success: false,
         error: {
@@ -77,7 +41,7 @@ async function fetchApi<T>(
       };
     }
 
-    // Backend returns { success, data } structure
+    // API returns { success, data } structure
     if (responseData.success !== undefined) {
       return responseData as ApiResponse<T>;
     }
@@ -97,23 +61,6 @@ async function fetchApi<T>(
     };
   }
 }
-
-// Auth Service
-export const authService = {
-  login: (email: string, participantId: string) =>
-    fetchApi<LoginResponse>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, participantId }),
-      skipAuth: true,
-    }),
-
-  logout: () =>
-    fetchApi<void>("/auth/logout", {
-      method: "POST",
-    }),
-
-  getProfile: () => fetchApi<LoginResponse["user"]>("/auth/profile"),
-};
 
 // Color Analysis Service
 export const colorService = {
@@ -153,33 +100,39 @@ export const recommendationService = {
 // Feedback Service
 export const feedbackService = {
   submitFeedback: (feedback: FeedbackData) =>
-    fetchApi<void>("/feedback", {
-      method: "POST",
-      body: JSON.stringify(feedback),
-    }),
+    fetchApi<{ id: string; rating: number; targetType: string; targetId: string; createdAt: string }>(
+      "/feedback",
+      {
+        method: "POST",
+        body: JSON.stringify(feedback),
+      }
+    ),
 };
 
-// Report Service
+// Report Service - Now uses client-side PDF generation
+// Use the useWeeklyReport hook from @/hooks/useWeeklyReport instead for PDF download
 export const reportService = {
-  downloadWeeklyReport: async (): Promise<Blob> => {
-    const headers: Record<string, string> = {
-      Accept: "application/pdf",
-    };
-
-    const token = getAccessToken();
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE_URL}/reports/weekly`, {
-      method: "GET",
-      headers,
-    });
-
-    if (!response.ok) {
-      throw new Error("리포트 다운로드에 실패했습니다.");
-    }
-
-    return response.blob();
-  },
+  getWeeklyReportData: () =>
+    fetchApi<{
+      user: { email: string; participantId: string };
+      weekStart: string;
+      weekEnd: string;
+      personalColor?: { season: string; tone: string; description: string };
+      emotionSummary?: {
+        anxiety: number;
+        stress: number;
+        satisfaction: number;
+        happiness: number;
+        depression: number;
+        totalEntries: number;
+      };
+      weeklyInsight?: {
+        improvement: string;
+        nextWeekSuggestion: string;
+        activeDays: number;
+        moodImprovement: number;
+        stressRelief: number;
+        colorImprovement: number;
+      };
+    }>("/reports/weekly"),
 };

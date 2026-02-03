@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  authService,
   colorService,
   emotionService,
   recommendationService,
@@ -10,22 +9,12 @@ import type { FeedbackData } from "@/types";
 
 // Query Keys
 export const queryKeys = {
-  profile: ["profile"] as const,
   colorResult: ["colorResult"] as const,
   dailyHealingColor: ["dailyHealingColor"] as const,
   emotionHistory: (limit?: number) => ["emotionHistory", limit] as const,
   weeklyInsight: ["weeklyInsight"] as const,
   recommendations: ["recommendations"] as const,
 };
-
-// Auth Hooks
-export function useProfile() {
-  return useQuery({
-    queryKey: queryKeys.profile,
-    queryFn: authService.getProfile,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-}
 
 // Color Hooks
 export function useColorResult() {
